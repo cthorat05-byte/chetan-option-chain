@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="mr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#075e54">
+<title>Chetan Option Chain</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+.header{background:#075e54;color:#fff;padding:14px 12px;position:sticky;top:0;z-index:5}
+.title{font-size:20px;font-weight:700}.sub{font-size:12px;opacity:.85;margin-top:3px}
+.controls{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+select,button{border:0;border-radius:8px;padding:10px 11px;font-weight:700}
+select{background:#fff;color:#222}button{background:#25d366;color:#063b2e}
+button.dark{background:#123b38;color:#fff}
+.status{margin:10px 12px;padding:10px;border-radius:9px;background:#fff;box-shadow:0 1px 5px #0001;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:0 12px 10px}
+.card{background:#fff;border-radius:9px;padding:9px;text-align:center;box-shadow:0 1px 4px #0001}
+.card b{display:block;font-size:16px}.card span{font-size:10px;color:#68737d}
+.tablewrap{margin:0 8px 20px;background:#fff;border-radius:10px;overflow:auto;box-shadow:0 1px 5px #0001}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:12px}
+th{position:sticky;top:0;background:#123b38;color:#fff;padding:9px 5px}
+td{padding:8px 5px;text-align:center;border-bottom:1px solid #eee}
+.ce{background:#fff4f4}.pe{background:#f2fbf5}.atm{background:#fff2b8!important;font-weight:700}
+.up{color:#078a45}.down{color:#d32626}.muted{color:#777}
+.note{padding:10px 12px;font-size:11px;color:#68737d}
+@media(max-width:600px){.cards{grid-template-columns:repeat(2,1fr)}.title{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="title">📊 Chetan Option Chain</div>
+  <div class="sub">NIFTY / BANKNIFTY • Live API Ready</div>
+  <div class="controls">
+    <select id="index"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select>
+    <select id="expiry"><option value="0">Nearest Expiry</option><option value="1">Next Expiry</option></select>
+    <button onclick="loadChain()">↻ Refresh</button>
+    <button class="dark" onclick="toggleAuto()">Auto: <span id="auto">OFF</span></button>
+  </div>
+</div>
+
+<div id="status" class="status">🟡 Demo mode — Fyers backend जोडल्यावर live data येईल.</div>
+
+<div class="cards">
+  <div class="card"><span>Spot</span><b id="spot">—</b></div>
+  <div class="card"><span>ATM</span><b id="atm">—</b></div>
+  <div class="card"><span>PCR</span><b id="pcr">—</b></div>
+  <div class="card"><span>Max Pain</span><b id="maxpain">—</b></div>
+</div>
+
+<div class="tablewrap">
+<table>
+<thead><tr>
+<th>CE OI</th><th>CE ΔOI</th><th>CE LTP</th><th>STRIKE</th><th>PE LTP</th><th>PE ΔOI</th><th>PE OI</th>
+</tr></thead>
+<tbody id="chain"></tbody>
+</table>
+</div>
+<div class="note">
+Live mode साठी browser मध्ये Fyers access token ठेवू नका. Secure backend/API bridge वापरा.
+</div>
+
+<script>
+let auto=false,timer=null;
+
+const demo=[
+{ceoi:182000,ced:12000,cel:248.5,s:24800,pel:212.3,ped:18000,peoi:265000},
+{ceoi:241000,ced:-8000,cel:205.2,s:24900,pel:245.8,ped:24000,peoi:318000},
+{ceoi:315000,ced:21000,cel:171.4,s:25000,pel:286.7,ped:31000,peoi:402000},
+{ceoi:366000,ced:34000,cel:142.1,s:25100,pel:331.5,ped:19000,peoi:355000},
+{ceoi:428000,ced:-11000,cel:118.4,s:25200,pel:386.2,ped:42000,peoi:291000},
+{ceoi:390000,ced:-22000,cel:97.6,s:25300,pel:447.8,ped:51000,peoi:230000},
+{ceoi:305000,ced:-14000,cel:79.2,s:25400,pel:514.6,ped:37000,peoi:168000}
+];
+
+function render(data=demo){
+  const spot=25062.4, atm=25100;
+  document.getElementById('spot').textContent=spot.toFixed(2);
+  document.getElementById('atm').textContent=atm;
+  const ce=data.reduce((a,x)=>a+x.ceoi,0), pe=data.reduce((a,x)=>a+x.peoi,0);
+  document.getElementById('pcr').textContent=(pe/ce).toFixed(2);
+  document.getElementById('maxpain').textContent='25100';
+  document.getElementById('chain').innerHTML=data.map(x=>`
+    <tr class="${x.s===atm?'atm':''}">
+      <td class="ce">${x.ceoi.toLocaleString('en-IN')}</td>
+      <td class="${x.ced>=0?'up':'down'}">${x.ced>=0?'+':''}${x.ced.toLocaleString('en-IN')}</td>
+      <td class="ce">${x.cel.toFixed(2)}</td>
+      <td><b>${x.s}</b></td>
+      <td class="pe">${x.pel.toFixed(2)}</td>
+      <td class="${x.ped>=0?'up':'down'}">${x.ped>=0?'+':''}${x.ped.toLocaleString('en-IN')}</td>
+      <td class="pe">${x.peoi.toLocaleString('en-IN')}</td>
+    </tr>`).join('');
+}
+async function loadChain(){
+  const idx=document.getElementById('index').value;
+  try{
+    const r=await fetch(`/api/option-chain?symbol=${encodeURIComponent(idx)}&expiry=${document.getElementById('expiry').value}`);
+    if(!r.ok) throw new Error('backend unavailable');
+    const j=await r.json();
+    render(j.chain);
+    document.getElementById('status').textContent='🟢 LIVE — '+idx+' data connected';
+  }catch(e){
+    render();
+    document.getElementById('status').textContent='🟡 Demo mode — /api/option-chain backend उपलब्ध नाही.';
+  }
+}
+function toggleAuto(){
+  auto=!auto;document.getElementById('auto').textContent=auto?'ON':'OFF';
+  if(auto){loadChain();timer=setInterval(loadChain,5000)}
+  else clearInterval(timer);
+}
+render();
+</script>
+</body>
+</html>
